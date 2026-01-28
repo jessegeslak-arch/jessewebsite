@@ -48,7 +48,8 @@
   justify-content: center;
   height: 100%;
   width: 100%;
-  padding: 2rem;
+  padding: 1rem;
+  padding-bottom: 5rem;
 }
 
 .flipbook-container {
@@ -169,22 +170,85 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 768px),
+(orientation: portrait) {
   .flipbook-wrapper {
-    padding: 1rem;
+    padding: 0.5rem;
+    padding-bottom: 4rem;
+  }
+
+  .flipbook-container {
+    width: 100%;
+    max-width: 100vw;
   }
 
   .nav-controls {
-    bottom: 1rem;
-    gap: 1rem;
+    bottom: 0.75rem;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: rgba(26, 26, 26, 0.95);
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
   }
 
   .nav-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .page-indicator {
+    font-size: 0.8rem;
+    min-width: 60px;
   }
 
   .keyboard-hint {
     display: none;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .flipbook-wrapper {
+    padding: 0.25rem;
+    padding-bottom: 3.5rem;
+  }
+
+  .nav-controls {
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .nav-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nav-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .page-indicator {
+    font-size: 0.75rem;
+    min-width: 50px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .nav-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-btn:active:not(:disabled) {
+    background: rgba(230, 57, 70, 0.8);
+    border-color: #e63946;
+    transform: scale(0.95);
   }
 }

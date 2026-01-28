@@ -29,53 +29,99 @@ const FlipBookPage = forwardRef<HTMLDivElement, PageProps>(
 
 FlipBookPage.displayName = 'FlipBookPage';
 
+// Mobile/portrait breakpoint - when viewport is narrow or in portrait orientation
+const MOBILE_BREAKPOINT = 768;
+
 function App() {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [pageImages, setPageImages] = useState<(string | null)[]>([]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const bookRef = useRef<any>(null);
   const pdfDocRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
 
-  // Calculate optimal page dimensions based on viewport
+  // Calculate optimal page dimensions based on viewport with better screen utilization
   useEffect(() => {
     const calculateDimensions = () => {
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // Reserve space for controls
-      const availableHeight = viewportHeight - 150;
-      const availableWidth = viewportWidth - 100;
+      // Detect mobile/portrait mode - either narrow screen or portrait orientation
+      const isPortrait = viewportHeight > viewportWidth;
+      const isNarrowScreen = viewportWidth < MOBILE_BREAKPOINT;
+      const mobileMode = isNarrowScreen || isPortrait;
+      setIsMobile(mobileMode);
+
+      // Minimize reserved space to maximize flipbook size
+      // Mobile: smaller margins, Desktop: slightly larger for controls
+      const verticalPadding = mobileMode ? 80 : 100;
+      const horizontalPadding = mobileMode ? 20 : 40;
+
+      const availableHeight = viewportHeight - verticalPadding;
+      const availableWidth = viewportWidth - horizontalPadding;
 
       // 11x17 aspect ratio (landscape) = 17:11 = 1.545
       const aspectRatio = 17 / 11;
 
-      // Calculate page dimensions
       let pageWidth: number;
       let pageHeight: number;
 
-      // For two-page spread, we need to fit 2 pages side by side
-      const spreadWidth = availableWidth;
-      const singlePageWidth = spreadWidth / 2;
+      if (mobileMode) {
+        // Single page mode for mobile/portrait - maximize the single page
+        // Calculate the largest page that fits while maintaining aspect ratio
+        const widthBasedHeight = availableWidth / aspectRatio;
+        const heightBasedWidth = availableHeight * aspectRatio;
 
-      // Calculate based on height constraint
-      const heightBasedPageWidth = availableHeight * aspectRatio;
-
-      // Use the smaller dimension to ensure it fits
-      if (heightBasedPageWidth <= singlePageWidth) {
-        pageWidth = heightBasedPageWidth;
-        pageHeight = availableHeight;
+        if (widthBasedHeight <= availableHeight) {
+          // Width is the constraint
+          pageWidth = availableWidth;
+          pageHeight = widthBasedHeight;
+        } else {
+          // Height is the constraint
+          pageWidth = heightBasedWidth;
+          pageHeight = availableHeight;
+        }
       } else {
-        pageWidth = singlePageWidth;
-        pageHeight = singlePageWidth / aspectRatio;
+        // Two-page spread mode for desktop/landscape
+        const spreadWidth = availableWidth;
+        const singlePageWidth = spreadWidth / 2;
+
+        // Calculate based on height constraint
+        const heightBasedPageWidth = availableHeight * aspectRatio;
+
+        // Use the smaller dimension to ensure it fits
+        if (heightBasedPageWidth <= singlePageWidth) {
+          pageWidth = heightBasedPageWidth;
+          pageHeight = availableHeight;
+        } else {
+          pageWidth = singlePageWidth;
+          pageHeight = singlePageWidth / aspectRatio;
+        }
       }
 
-      setDimensions({ width: Math.floor(pageWidth), height: Math.floor(pageHeight) });
+      // Ensure minimum dimensions
+      pageWidth = Math.max(Math.floor(pageWidth), 200);
+      pageHeight = Math.max(Math.floor(pageHeight), 130);
+
+      setDimensions({ width: pageWidth, height: pageHeight });
     };
 
     calculateDimensions();
+
+    // Use ResizeObserver for better performance and accuracy
+    const resizeObserver = new ResizeObserver(calculateDimensions);
+    resizeObserver.observe(document.body);
+
+    // Also listen to orientation changes
+    window.addEventListener('orientationchange', calculateDimensions);
     window.addEventListener('resize', calculateDimensions);
-    return () => window.removeEventListener('resize', calculateDimensions);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('orientationchange', calculateDimensions);
+      window.removeEventListener('resize', calculateDimensions);
+    };
   }, []);
 
   // Load PDF and render pages to images
@@ -162,6 +208,11 @@ function App() {
 
   // Calculate display page numbers for indicator
   const getDisplayPages = () => {
+    if (isMobile) {
+      // Single page mode - just show current page
+      return `${currentPage + 1}`;
+    }
+    // Double page spread mode
     if (currentPage === 0) {
       return '1';
     }
@@ -206,7 +257,7 @@ function App() {
             startPage={0}
             drawShadow={true}
             flippingTime={600}
-            usePortrait={false}
+            usePortrait={isMobile}
             startZIndex={0}
             autoSize={false}
             maxShadowOpacity={0.5}
@@ -222,9 +273,11 @@ function App() {
           </HTMLFlipBook>
         </div>
 
-        <span className="keyboard-hint">
-          Click a page or use <kbd>←</kbd> <kbd>→</kbd> arrow keys to navigate
-        </span>
+        {!isMobile && (
+          <span className="keyboard-hint">
+            Click a page or use <kbd>←</kbd> <kbd>→</kbd> arrow keys to navigate
+          </span>
+        )}
       </div>
 
       <div className="nav-controls">
