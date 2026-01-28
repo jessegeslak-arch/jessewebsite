@@ -124,61 +124,92 @@ function App() {
     };
   }, []);
 
-  // Load PDF and render pages to images
+  // Load PDF document (only once)
   useEffect(() => {
-    if (dimensions.width === 0) return;
-
-    const loadPdf = async () => {
+    const loadPdfDoc = async () => {
       try {
         const loadingTask = pdfjs.getDocument('/portfolio.pdf');
         const pdf = await loadingTask.promise;
         pdfDocRef.current = pdf;
         setNumPages(pdf.numPages);
-
-        // Initialize array with nulls
-        const images: (string | null)[] = new Array(pdf.numPages).fill(null);
-        setPageImages([...images]);
-
-        // Render each page to canvas and convert to image
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-
-          // Calculate scale to fit desired dimensions
-          const viewport = page.getViewport({ scale: 1 });
-          const scale = Math.min(
-            dimensions.width / viewport.width,
-            dimensions.height / viewport.height
-          ) * 2; // 2x for higher quality
-
-          const scaledViewport = page.getViewport({ scale });
-
-          // Create canvas
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d')!;
-          canvas.width = scaledViewport.width;
-          canvas.height = scaledViewport.height;
-
-          // Render page to canvas
-          await page.render({
-            canvasContext: context,
-            viewport: scaledViewport,
-            canvas: canvas,
-          } as any).promise;
-
-          // Convert to image data URL
-          const imageDataUrl = canvas.toDataURL('image/png');
-
-          // Update images array
-          images[i - 1] = imageDataUrl;
-          setPageImages([...images]);
-        }
+        setPageImages(new Array(pdf.numPages).fill(null));
       } catch (error) {
         console.error('Error loading PDF:', error);
       }
     };
+    loadPdfDoc();
+  }, []);
 
-    loadPdf();
-  }, [dimensions.width, dimensions.height]);
+  // Helper to render a specific page
+  const renderPage = useCallback(async (pageIndex: number, width: number, height: number) => {
+    if (!pdfDocRef.current || pageIndex < 0 || pageIndex >= numPages) return;
+    if (pageImages[pageIndex] && dimensions.width === width) return; // Already rendered for this size
+
+    try {
+      const page = await pdfDocRef.current.getPage(pageIndex + 1);
+      const viewport = page.getViewport({ scale: 1 });
+
+      // Calculate scale - 1.5x for a good balance of quality and speed
+      const scale = Math.min(width / viewport.width, height / viewport.height) * 1.5;
+      const scaledViewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d')!;
+      canvas.width = scaledViewport.width;
+      canvas.height = scaledViewport.height;
+
+      await page.render({
+        canvasContext: context,
+        viewport: scaledViewport,
+      } as any).promise;
+
+      const imageDataUrl = canvas.toDataURL('image/webp', 0.8); // Use WebP for better compression
+
+      setPageImages(prev => {
+        const newImages = [...prev];
+        newImages[pageIndex] = imageDataUrl;
+        return newImages;
+      });
+
+      // Clean up canvas
+      canvas.width = 0;
+      canvas.height = 0;
+    } catch (error) {
+      console.error(`Error rendering page ${pageIndex + 1}:`, error);
+    }
+  }, [numPages, dimensions.width]);
+
+  // Render visible and nearby pages when current page changes or PDF loads
+  useEffect(() => {
+    if (!pdfDocRef.current || dimensions.width === 0 || numPages === 0) return;
+
+    const pagesToRender = new Set<number>();
+
+    // Always render current view
+    pagesToRender.add(currentPage);
+    if (!isMobile) {
+      pagesToRender.add(currentPage + 1);
+    }
+
+    // Pre-render next and previous spreads for smoothness
+    const buffer = isMobile ? 2 : 4;
+    for (let i = 1; i <= buffer; i++) {
+      if (currentPage + i < numPages) pagesToRender.add(currentPage + i);
+      if (currentPage - i >= 0) pagesToRender.add(currentPage - i);
+    }
+
+    // Execute rendering
+    const renderNeeded = Array.from(pagesToRender).filter(idx => !pageImages[idx]);
+
+    // Render sequentially to not freeze the UI
+    const renderSequential = async () => {
+      for (const idx of renderNeeded) {
+        await renderPage(idx, dimensions.width, dimensions.height);
+      }
+    };
+
+    renderSequential();
+  }, [currentPage, numPages, dimensions.width, dimensions.height, isMobile]);
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
@@ -306,6 +337,11 @@ function App() {
             <polyline points="9,6 15,12 9,18" />
           </svg>
         </button>
+      </div>
+
+      <div className="contact-info">
+        <a href="mailto:jgeslak@uoregon.edu">jgeslak@uoregon.edu</a>
+        <a href="tel:+13603485097">+1-360-348-5097</a>
       </div>
     </div>
   );

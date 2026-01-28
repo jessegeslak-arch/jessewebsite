@@ -252,3 +252,47 @@
     transform: scale(0.95);
   }
 }
+
+/* Contact info */
+.contact-info {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  z-index: 100;
+}
+
+.contact-info a {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  transition: color 0.3s ease;
+}
+
+.contact-info a:hover {
+  color: #e63946;
+}
+
+@media (max-width: 768px),
+(orientation: portrait) {
+  .contact-info {
+    bottom: 5.5rem;
+    right: 1rem;
+    align-items: center;
+    width: calc(100% - 2rem);
+    pointer-events: none;
+  }
+
+  .contact-info a {
+    pointer-events: auto;
+    background: rgba(26, 26, 26, 0.5);
+    padding: 2px 8px;
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+  }
+}
