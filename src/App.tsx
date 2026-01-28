@@ -223,7 +223,7 @@ function App() {
         </div>
 
         <span className="keyboard-hint">
-          Use <kbd>←</kbd> <kbd>→</kbd> arrow keys to navigate
+          Click a page or use <kbd>←</kbd> <kbd>→</kbd> arrow keys to navigate
         </span>
       </div>
 
