@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import * as pdfjs from 'pdfjs-dist';
 import './App.css';
-
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // Pre-rendered page component for the flipbook
 interface PageProps {
@@ -33,13 +29,12 @@ FlipBookPage.displayName = 'FlipBookPage';
 const MOBILE_BREAKPOINT = 768;
 
 function App() {
-  const [numPages, setNumPages] = useState<number>(0);
+  const [numPages] = useState<number>(24); // Based on the number of files in public/portfolio
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [pageImages, setPageImages] = useState<(string | null)[]>([]);
+  const [pageImages, setPageImages] = useState<string[]>([]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const bookRef = useRef<any>(null);
-  const pdfDocRef = useRef<pdfjs.PDFDocumentProxy | null>(null);
 
   // Calculate optimal page dimensions based on viewport with better screen utilization
   useEffect(() => {
@@ -61,8 +56,8 @@ function App() {
       const availableHeight = viewportHeight - verticalPadding;
       const availableWidth = viewportWidth - horizontalPadding;
 
-      // 11x17 aspect ratio (landscape) = 17:11 = 1.545
-      const aspectRatio = 17 / 11;
+      // 5500x3300 aspect ratio (landscape) = 5:3 = 1.666
+      const aspectRatio = 5500 / 3300;
 
       let pageWidth: number;
       let pageHeight: number;
@@ -124,92 +119,12 @@ function App() {
     };
   }, []);
 
-  // Load PDF document (only once)
+  // Load image paths
   useEffect(() => {
-    const loadPdfDoc = async () => {
-      try {
-        const loadingTask = pdfjs.getDocument('/portfolio.pdf');
-        const pdf = await loadingTask.promise;
-        pdfDocRef.current = pdf;
-        setNumPages(pdf.numPages);
-        setPageImages(new Array(pdf.numPages).fill(null));
-      } catch (error) {
-        console.error('Error loading PDF:', error);
-      }
-    };
-    loadPdfDoc();
-  }, []);
+    const images = Array.from({ length: numPages }, (_, i) => `/portfolio/portfolio v3 for web_${i + 1}.webp`);
+    setPageImages(images);
+  }, [numPages]);
 
-  // Helper to render a specific page
-  const renderPage = useCallback(async (pageIndex: number, width: number, height: number) => {
-    if (!pdfDocRef.current || pageIndex < 0 || pageIndex >= numPages) return;
-    if (pageImages[pageIndex] && dimensions.width === width) return; // Already rendered for this size
-
-    try {
-      const page = await pdfDocRef.current.getPage(pageIndex + 1);
-      const viewport = page.getViewport({ scale: 1 });
-
-      // Calculate scale - 1.5x for a good balance of quality and speed
-      const scale = Math.min(width / viewport.width, height / viewport.height) * 1.5;
-      const scaledViewport = page.getViewport({ scale });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d')!;
-      canvas.width = scaledViewport.width;
-      canvas.height = scaledViewport.height;
-
-      await page.render({
-        canvasContext: context,
-        viewport: scaledViewport,
-      } as any).promise;
-
-      const imageDataUrl = canvas.toDataURL('image/webp', 0.8); // Use WebP for better compression
-
-      setPageImages(prev => {
-        const newImages = [...prev];
-        newImages[pageIndex] = imageDataUrl;
-        return newImages;
-      });
-
-      // Clean up canvas
-      canvas.width = 0;
-      canvas.height = 0;
-    } catch (error) {
-      console.error(`Error rendering page ${pageIndex + 1}:`, error);
-    }
-  }, [numPages, dimensions.width]);
-
-  // Render visible and nearby pages when current page changes or PDF loads
-  useEffect(() => {
-    if (!pdfDocRef.current || dimensions.width === 0 || numPages === 0) return;
-
-    const pagesToRender = new Set<number>();
-
-    // Always render current view
-    pagesToRender.add(currentPage);
-    if (!isMobile) {
-      pagesToRender.add(currentPage + 1);
-    }
-
-    // Pre-render next and previous spreads for smoothness
-    const buffer = isMobile ? 2 : 4;
-    for (let i = 1; i <= buffer; i++) {
-      if (currentPage + i < numPages) pagesToRender.add(currentPage + i);
-      if (currentPage - i >= 0) pagesToRender.add(currentPage - i);
-    }
-
-    // Execute rendering
-    const renderNeeded = Array.from(pagesToRender).filter(idx => !pageImages[idx]);
-
-    // Render sequentially to not freeze the UI
-    const renderSequential = async () => {
-      for (const idx of renderNeeded) {
-        await renderPage(idx, dimensions.width, dimensions.height);
-      }
-    };
-
-    renderSequential();
-  }, [currentPage, numPages, dimensions.width, dimensions.height, isMobile]);
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
@@ -255,7 +170,7 @@ function App() {
     return `${leftPage} - ${rightPage}`;
   };
 
-  if (dimensions.width === 0 || numPages === 0) {
+  if (dimensions.width === 0 || pageImages.length === 0) {
     return (
       <div className="app">
         <div className="loading-container">
@@ -298,7 +213,7 @@ function App() {
             clickEventForward={true}
             useMouseEvents={true}
           >
-            {pageImages.map((image, index) => (
+            {pageImages.map((image: string, index: number) => (
               <FlipBookPage key={index} pageImage={image} />
             ))}
           </HTMLFlipBook>
