@@ -121,7 +121,7 @@ function App() {
 
   // Load image paths
   useEffect(() => {
-    const images = Array.from({ length: numPages }, (_, i) => `/portfolio/portfolio v3 for web_${i + 1}.webp`);
+    const images = Array.from({ length: numPages }, (_, i) => `/portfolio/portfolio v3 for print_${i + 1}.webp`);
     setPageImages(images);
   }, [numPages]);
 
