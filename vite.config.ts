@@ -1,5 +1,6 @@
-import { readdirSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -11,13 +12,19 @@ const RESOLVED_ID = '\0' + VIRTUAL_ID
 // so renaming or adding spreads needs no code change. Only the top level is read,
 // which keeps archived sets in public/portfolio/old out of the book.
 function portfolioPages(): Plugin {
+  // Files under public/ are served at stable URLs with no build hash, so a
+  // re-export that reuses a filename would keep serving the stale cached image.
+  // Tagging each URL with a hash of its bytes makes the URL change with content.
+  const contentTag = (name: string) =>
+    createHash('sha1').update(readFileSync(join(PORTFOLIO_DIR, name))).digest('hex').slice(0, 8)
+
   const readPages = () =>
     readdirSync(PORTFOLIO_DIR, { withFileTypes: true })
       .filter((entry) => entry.isFile() && /\.(webp|avif|png|jpe?g)$/i.test(entry.name))
       .map((entry) => entry.name)
-      // Numeric-aware collation so "_2_left" sorts before "_10_left"
+      // Numeric-aware collation so "_2" sorts before "_10"
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' }))
-      .map((name) => `/portfolio/${encodeURIComponent(name)}`)
+      .map((name) => `/portfolio/${encodeURIComponent(name)}?v=${contentTag(name)}`)
 
   return {
     name: 'portfolio-pages',
