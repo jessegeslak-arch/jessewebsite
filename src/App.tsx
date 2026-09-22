@@ -207,7 +207,7 @@ function App() {
             startZIndex={0}
             autoSize={false}
             maxShadowOpacity={0.5}
-            showPageCorners={true}
+            showPageCorners={false}
             disableFlipByClick={false}
             swipeDistance={30}
             clickEventForward={true}
