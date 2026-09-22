@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
+import pageImages from 'virtual:portfolio-pages';
 import './App.css';
 
 // Pre-rendered page component for the flipbook
@@ -29,9 +30,8 @@ FlipBookPage.displayName = 'FlipBookPage';
 const MOBILE_BREAKPOINT = 768;
 
 function App() {
-  const [numPages] = useState<number>(24); // Based on the number of files in public/portfolio
+  const numPages = pageImages.length;
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [pageImages, setPageImages] = useState<string[]>([]);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const bookRef = useRef<any>(null);
@@ -56,8 +56,8 @@ function App() {
       const availableHeight = viewportHeight - verticalPadding;
       const availableWidth = viewportWidth - horizontalPadding;
 
-      // 5500x3300 aspect ratio (landscape) = 5:3 = 1.666
-      const aspectRatio = 5500 / 3300;
+      // 6800x4400 aspect ratio (landscape) = 17:11 = 1.545
+      const aspectRatio = 6800 / 4400;
 
       let pageWidth: number;
       let pageHeight: number;
@@ -118,13 +118,6 @@ function App() {
       window.removeEventListener('resize', calculateDimensions);
     };
   }, []);
-
-  // Load image paths
-  useEffect(() => {
-    const images = Array.from({ length: numPages }, (_, i) => `/portfolio/portfolio v3 for print_${i + 1}.webp`);
-    setPageImages(images);
-  }, [numPages]);
-
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
