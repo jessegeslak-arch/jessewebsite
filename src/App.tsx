@@ -248,7 +248,7 @@ function App() {
       </div>
 
       <div className="contact-info">
-        <a href="mailto:jgeslak@uoregon.edu">jgeslak@uoregon.edu</a>
+        <a href="mailto:jesse.geslak@gmail.com">jesse.geslak@gmail.com</a>
         <a href="tel:+13603485097">+1-360-348-5097</a>
       </div>
     </div>
